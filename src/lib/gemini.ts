@@ -13,7 +13,6 @@ import type { Evaluation } from '@/types';
 import { GEMINI_CONFIG } from '@/config/constants';
 import { INITIAL_CRITIQUE_PROMPT, buildContinuationPrompt } from './prompts';
 import { parseGeminiResponse } from './parseResponse';
-import { generateFallbackEvaluation } from './fallback';
 import { GeminiError, ParseError } from './errors';
 
 // 後方互換性のためにGeminiErrorを再エクスポート
@@ -142,7 +141,10 @@ export async function generateCritique(
         }
     }
 
-    // すべてのリトライが失敗した場合はフォールバック
-    console.error('[Gemini] All retries exhausted, using fallback:', lastError);
-    return generateFallbackEvaluation();
+    // すべてのリトライが失敗した場合はエラーを投げる（フォールバックは使わない）
+    console.error('[Gemini] All retries exhausted:', lastError);
+    throw new GeminiError(
+        'API_ERROR',
+        `Gemini API failed after ${GEMINI_CONFIG.MAX_RETRIES + 1} attempts: ${lastError?.message || 'Unknown error'}`
+    );
 }
