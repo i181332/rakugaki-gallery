@@ -1,65 +1,250 @@
-import Image from "next/image";
+// src/app/page.tsx
+'use client';
 
-export default function Home() {
+/**
+ * Rakugaki Gallery - メインページ
+ *
+ * 画面ステートに応じた表示を制御
+ * - drawing: 描画キャンバス
+ * - evaluating: ローディング
+ * - gallery: 評論結果表示
+ */
+
+import React, { useRef, useCallback, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Sparkles, Pencil, RotateCcw } from 'lucide-react';
+import { DrawingCanvas, type DrawingCanvasHandle } from '@/components/canvas/DrawingCanvas';
+import { Toolbar } from '@/components/canvas/Toolbar';
+import { LoadingAnimation } from '@/components/ui/LoadingAnimation';
+import { GalleryCard } from '@/components/gallery/GalleryCard';
+import { ShareButtons } from '@/components/share/ShareButtons';
+import { Button } from '@/components/ui/Button';
+import {
+  useGalleryStore,
+  useCurrentScreen,
+  useError,
+  useCurrentArtwork,
+} from '@/stores/galleryStore';
+import type { EvaluateRequest, EvaluateResponse, EvaluateErrorResponse } from '@/types';
+
+// ============================================================
+// コンポーネント
+// ============================================================
+
+export default function HomePage() {
+  const canvasRef = useRef<DrawingCanvasHandle>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const currentScreen = useCurrentScreen();
+  const error = useError();
+  const currentArtwork = useCurrentArtwork();
+  const { setScreen, setCurrentArtwork, setError, reset } =
+    useGalleryStore();
+
+  // 評論をリクエスト
+  const handleSubmit = useCallback(async () => {
+    const image = canvasRef.current?.getImage();
+
+    if (!image) {
+      setError('キャンバスに何か描いてください');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+    setScreen('evaluating');
+
+    try {
+      // 続編機能: 直近の作品情報を取得
+      const { artworkHistory } = useGalleryStore.getState();
+      const lastArtwork = artworkHistory[artworkHistory.length - 1];
+
+      const requestBody: EvaluateRequest = {
+        image,
+        previousWork: lastArtwork
+          ? {
+            id: lastArtwork.id,
+            title: lastArtwork.evaluation.title,
+            artist: lastArtwork.evaluation.artist,
+            critique: lastArtwork.evaluation.critique,
+            price: lastArtwork.evaluation.price,
+            seriesNumber: lastArtwork.seriesNumber,
+          }
+          : undefined,
+      };
+
+      const response = await fetch('/api/evaluate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+
+      const data: EvaluateResponse | EvaluateErrorResponse = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error);
+      }
+
+      setCurrentArtwork(data.artwork);
+      setScreen('gallery');
+    } catch (err) {
+      console.error('[HomePage] Submit error:', err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : '評論の生成に失敗しました。もう一度お試しください。'
+      );
+      setScreen('drawing');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [setScreen, setCurrentArtwork, setError]);
+
+  // 新しい作品を描く
+  const handleNewArtwork = useCallback(() => {
+    canvasRef.current?.clear();
+    reset();
+  }, [reset]);
+
+  // 続けて描く（同じアーティストとして）
+  const handleContinue = useCallback(() => {
+    canvasRef.current?.clear();
+    setScreen('drawing');
+    setError(null);
+  }, [setScreen, setError]);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
+      {/* ヘッダー */}
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <span className="text-2xl">🎨</span>
+            <span className="hidden sm:inline">Rakugaki Gallery</span>
+            <span className="sm:hidden">落書き美術館</span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+          {currentScreen !== 'drawing' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleNewArtwork}
+              leftIcon={<Pencil size={16} />}
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              新しく描く
+            </Button>
+          )}
+        </div>
+      </header>
+
+      {/* メインコンテンツ */}
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <AnimatePresence mode="wait">
+          {/* 描画画面 */}
+          {currentScreen === 'drawing' && (
+            <motion.div
+              key="drawing"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
             >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+              {/* 説明 */}
+              <div className="text-center space-y-2">
+                <h2 className="text-2xl font-bold text-gray-800">
+                  あなたの落書きを評論します
+                </h2>
+                <p className="text-gray-500">
+                  どんな落書きでも、世界的美術評論家が大真面目に評価します
+                </p>
+              </div>
+
+              {/* キャンバス */}
+              <DrawingCanvas ref={canvasRef} />
+
+              {/* ツールバー */}
+              <Toolbar />
+
+              {/* エラー表示 */}
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-center"
+                >
+                  {error}
+                </motion.div>
+              )}
+
+              {/* 送信ボタン */}
+              <div className="flex justify-center">
+                <Button
+                  size="lg"
+                  onClick={handleSubmit}
+                  isLoading={isSubmitting}
+                  leftIcon={<Sparkles size={20} />}
+                  className="min-w-[200px]"
+                >
+                  評論をもらう
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ローディング画面 */}
+          {currentScreen === 'evaluating' && (
+            <motion.div
+              key="evaluating"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <LoadingAnimation />
+            </motion.div>
+          )}
+
+          {/* 結果表示画面 */}
+          {currentScreen === 'gallery' && currentArtwork && (
+            <motion.div
+              key="gallery"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.5 }}
+              className="space-y-6"
+            >
+              {/* ギャラリーカード */}
+              <GalleryCard ref={cardRef} artwork={currentArtwork} />
+
+              {/* シェアボタン */}
+              <ShareButtons artwork={currentArtwork} cardRef={cardRef} />
+
+              {/* 続けて描くボタン */}
+              <div className="flex justify-center gap-4 pt-4">
+                <Button
+                  variant="secondary"
+                  onClick={handleContinue}
+                  leftIcon={<RotateCcw size={18} />}
+                >
+                  続けて描く
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* フッター */}
+      <footer className="mt-auto py-6 text-center text-gray-400 text-sm">
+        <p>
+          🧐 評論家: ジャン＝ピエール・デュボワ
+        </p>
+        <p className="mt-1">
+          ※ 本アプリの評論はAIによるパロディです
+        </p>
+      </footer>
+    </main>
   );
 }

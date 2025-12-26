@@ -1,0 +1,32 @@
+# wrangler.toml
+# Cloudflare Pages デプロイ設定
+
+name = "rakugaki-gallery"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Pages設定
+pages_build_output_dir = ".next"
+
+# 環境変数（秘密情報はCloudflare Dashboardで設定）
+[vars]
+ENVIRONMENT = "production"
+
+# 本番環境設定
+[env.production]
+name = "rakugaki-gallery"
+
+# プレビュー環境設定
+[env.preview]
+name = "rakugaki-gallery-preview"
+
+# KV Namespace（シェア用データ永続化）
+# 本番環境では以下を有効化し、KV NamespaceのIDを設定
+# [[kv_namespaces]]
+# binding = "ARTWORKS"
+# id = "your-kv-namespace-id"
+
+# Durable Objects（より高度な永続化が必要な場合）
+# [[durable_objects.bindings]]
+# name = "ARTWORK_STORE"
+# class_name = "ArtworkStore"
