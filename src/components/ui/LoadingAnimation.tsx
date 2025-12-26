@@ -5,6 +5,7 @@
  * ローディングアニメーション
  *
  * 評論生成中に表示される、評論家のつぶやきアニメーション
+ * 温かみのあるデザイン
  */
 
 import React, { useState, useEffect } from 'react';
@@ -43,14 +44,14 @@ export function LoadingAnimation() {
             <div className="relative w-32 h-32 mb-8">
                 {/* 外側のリング */}
                 <motion.div
-                    className="absolute inset-0 rounded-full border-4 border-gray-200"
+                    className="absolute inset-0 rounded-full border-4 border-[var(--color-accent-light)]"
                     animate={{ rotate: 360 }}
                     transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
                 />
 
                 {/* パルスする内側の円 */}
                 <motion.div
-                    className="absolute inset-4 rounded-full bg-gradient-to-br from-gray-100 to-gray-200"
+                    className="absolute inset-4 rounded-full bg-gradient-to-br from-[var(--color-bg-secondary)] to-[var(--color-accent-light)]"
                     animate={{ scale: [1, 1.1, 1] }}
                     transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
                 />
@@ -68,7 +69,7 @@ export function LoadingAnimation() {
                 {[0, 1, 2].map((i) => (
                     <motion.div
                         key={i}
-                        className="absolute w-3 h-3 bg-gray-800 rounded-full"
+                        className="absolute w-3 h-3 bg-[var(--color-accent)] rounded-full"
                         style={{
                             top: '50%',
                             left: '50%',
@@ -92,7 +93,7 @@ export function LoadingAnimation() {
 
             {/* タイトル */}
             <motion.h2
-                className="text-xl font-bold text-gray-800 mb-4"
+                className="text-xl font-bold text-[var(--color-primary)] mb-4"
                 animate={{ opacity: [0.8, 1, 0.8] }}
                 transition={{ duration: 2, repeat: Infinity }}
             >
@@ -103,7 +104,7 @@ export function LoadingAnimation() {
             <AnimatePresence mode="wait">
                 <motion.p
                     key={murmur}
-                    className="text-gray-600 text-center italic max-w-xs"
+                    className="text-[var(--color-text-secondary)] text-center italic max-w-xs"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
@@ -114,7 +115,7 @@ export function LoadingAnimation() {
             </AnimatePresence>
 
             {/* サブテキスト */}
-            <p className="text-gray-400 text-sm mt-6">
+            <p className="text-[var(--color-text-muted)] text-sm mt-6">
                 ジャン＝ピエール・デュボワ氏が評論を執筆しています
             </p>
         </div>

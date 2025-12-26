@@ -7,7 +7,7 @@
  * Konvaを使用したインタラクティブなキャンバス
  * - マウス/タッチ対応
  * - リアルタイム描画
- * - 履歴管理との連携
+ * - 木枠風のフレームデザイン
  */
 
 import React, {
@@ -29,13 +29,9 @@ import { CANVAS_CONFIG } from '@/config/constants';
 // ============================================================
 
 interface LineData {
-    /** 一意のID（React key用） */
     id: number;
-    /** 点の座標配列 [x1, y1, x2, y2, ...] */
     points: number[];
-    /** 線の色 */
     stroke: string;
-    /** 線の太さ */
     strokeWidth: number;
 }
 
@@ -49,9 +45,7 @@ function generateLineId(): number {
 }
 
 export interface DrawingCanvasHandle {
-    /** キャンバスをBase64画像として取得 */
     getImage: () => string | null;
-    /** キャンバスをクリア */
     clear: () => void;
 }
 
@@ -91,10 +85,6 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle>(
                 setLines([]);
             },
         }));
-
-        // ========== 履歴からの復元 ==========
-        // currentImageがnullになったらキャンバスをクリア
-        // useEffectの代わりにref経由のclearメソッドで対応
 
         // ========== タッチスクロール防止 ==========
         useEffect(() => {
@@ -152,10 +142,8 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle>(
             if (!isDrawingRef.current) return;
             isDrawingRef.current = false;
 
-            // 履歴に保存
             const stage = stageRef.current;
             if (stage && lines.length > 0) {
-                // 非同期で保存（描画完了後）
                 requestAnimationFrame(() => {
                     const dataUrl = stage.toDataURL({ pixelRatio: CANVAS_CONFIG.PIXEL_RATIO });
                     saveToHistory(dataUrl);
@@ -166,47 +154,56 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle>(
         // ========== レンダリング ==========
         return (
             <div className="flex justify-center">
-                <div
-                    className="relative border-2 border-gray-200 rounded-lg bg-white shadow-inner overflow-hidden"
-                    style={{ width: canvasSize, height: canvasSize }}
-                >
-                    {/* 描画案内（キャンバスが空の時） */}
-                    {lines.length === 0 && (
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                            <p className="text-gray-300 text-lg font-medium select-none">
-                                ここに描いてください
-                            </p>
-                        </div>
-                    )}
-
-                    <Stage
-                        ref={stageRef}
-                        width={canvasSize}
-                        height={canvasSize}
-                        onMouseDown={handlePointerDown}
-                        onMouseMove={handlePointerMove}
-                        onMouseUp={handlePointerUp}
-                        onMouseLeave={handlePointerUp}
-                        onTouchStart={handlePointerDown}
-                        onTouchMove={handlePointerMove}
-                        onTouchEnd={handlePointerUp}
-                        className="cursor-crosshair"
+                {/* 木枠風フレーム */}
+                <div className="wood-frame">
+                    <div
+                        className="wood-frame-inner relative overflow-hidden"
+                        style={{ width: canvasSize, height: canvasSize }}
                     >
-                        <Layer>
-                            {lines.map((line) => (
-                                <Line
-                                    key={line.id}
-                                    points={line.points}
-                                    stroke={line.stroke}
-                                    strokeWidth={line.strokeWidth}
-                                    tension={0.5}
-                                    lineCap="round"
-                                    lineJoin="round"
-                                    globalCompositeOperation="source-over"
-                                />
-                            ))}
-                        </Layer>
-                    </Stage>
+                        {/* 描画案内（キャンバスが空の時） */}
+                        {lines.length === 0 && (
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                                <div className="text-center">
+                                    <p className="text-[var(--color-text-muted)] text-lg font-medium select-none">
+                                        ここに描いてください
+                                    </p>
+                                    <p className="text-[var(--color-text-muted)] text-sm mt-1 opacity-60 select-none">
+                                        マウスまたはタッチで描画
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        <Stage
+                            ref={stageRef}
+                            width={canvasSize}
+                            height={canvasSize}
+                            onMouseDown={handlePointerDown}
+                            onMouseMove={handlePointerMove}
+                            onMouseUp={handlePointerUp}
+                            onMouseLeave={handlePointerUp}
+                            onTouchStart={handlePointerDown}
+                            onTouchMove={handlePointerMove}
+                            onTouchEnd={handlePointerUp}
+                            className="cursor-crosshair"
+                            style={{ background: '#FFFCF8' }}
+                        >
+                            <Layer>
+                                {lines.map((line) => (
+                                    <Line
+                                        key={line.id}
+                                        points={line.points}
+                                        stroke={line.stroke}
+                                        strokeWidth={line.strokeWidth}
+                                        tension={0.5}
+                                        lineCap="round"
+                                        lineJoin="round"
+                                        globalCompositeOperation="source-over"
+                                    />
+                                ))}
+                            </Layer>
+                        </Stage>
+                    </div>
                 </div>
             </div>
         );

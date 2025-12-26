@@ -4,11 +4,14 @@
 /**
  * 描画ツールバー
  *
- * ブラシサイズ、色選択、Undo/Redo、クリアボタンを提供
+ * お絵描きの森風の洗練されたデザイン
+ * - カラーパレット（グリッド配置）
+ * - ブラシサイズ選択
+ * - Undo/Redo/クリアボタン
  */
 
 import React, { useCallback } from 'react';
-import { Undo2, Redo2, Trash2, Palette, Minus } from 'lucide-react';
+import { Undo2, Redo2, Trash2 } from 'lucide-react';
 import { useGalleryStore, useCanUndo, useCanRedo } from '@/stores/galleryStore';
 import { BRUSH_SIZES, COLOR_PALETTE } from '@/types';
 import { cn } from '@/lib/utils';
@@ -37,77 +40,91 @@ export function Toolbar() {
     }, [clearCanvas]);
 
     return (
-        <div className="bg-gradient-to-b from-gray-50 to-gray-100 rounded-xl p-4 space-y-4 shadow-sm border border-gray-200">
-            {/* 履歴操作ボタン */}
-            <div className="flex justify-center gap-2">
-                <ToolButton
-                    onClick={undo}
-                    disabled={!canUndo}
-                    icon={<Undo2 size={18} />}
-                    label="元に戻す"
-                />
-                <ToolButton
-                    onClick={redo}
-                    disabled={!canRedo}
-                    icon={<Redo2 size={18} />}
-                    label="やり直す"
-                />
-                <ToolButton
-                    onClick={handleClear}
-                    icon={<Trash2 size={18} />}
-                    label="クリア"
-                    variant="danger"
-                />
-            </div>
+        <div className="toolbar-panel p-4 space-y-4">
+            {/* 上部: ツールボタンとサイズ選択 */}
+            <div className="flex items-center justify-between gap-4">
+                {/* 履歴操作ボタン */}
+                <div className="flex gap-2">
+                    <button
+                        onClick={undo}
+                        disabled={!canUndo}
+                        className="tool-btn"
+                        aria-label="元に戻す"
+                        title="元に戻す"
+                    >
+                        <Undo2 size={18} />
+                    </button>
+                    <button
+                        onClick={redo}
+                        disabled={!canRedo}
+                        className="tool-btn"
+                        aria-label="やり直す"
+                        title="やり直す"
+                    >
+                        <Redo2 size={18} />
+                    </button>
+                    <button
+                        onClick={handleClear}
+                        className="tool-btn hover:!bg-red-50 hover:!text-red-600 hover:!border-red-300"
+                        aria-label="クリア"
+                        title="クリア"
+                    >
+                        <Trash2 size={18} />
+                    </button>
+                </div>
 
-            {/* ブラシサイズ選択 */}
-            <div className="flex justify-center items-center gap-2">
-                <span className="text-sm text-gray-500 font-medium flex items-center gap-1">
-                    <Minus size={14} />
-                    サイズ
-                </span>
-                <div className="flex gap-1.5">
-                    {BRUSH_SIZES.map((size) => (
-                        <button
-                            key={size}
-                            onClick={() => setBrushSize(size)}
-                            className={cn(
-                                'w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-200',
-                                drawing.brushSize === size
-                                    ? 'bg-gray-800 text-white shadow-md scale-105'
-                                    : 'bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300'
-                            )}
-                            aria-label={`ブラシサイズ ${size}px`}
-                            title={`${size}px`}
-                        >
-                            <div
+                {/* ブラシサイズ選択 */}
+                <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-[var(--color-text-muted)]">
+                        サイズ
+                    </span>
+                    <div className="flex gap-2">
+                        {BRUSH_SIZES.map((size) => (
+                            <button
+                                key={size}
+                                onClick={() => setBrushSize(size)}
                                 className={cn(
-                                    'rounded-full',
-                                    drawing.brushSize === size ? 'bg-white' : 'bg-gray-700'
+                                    'size-indicator',
+                                    drawing.brushSize === size && 'active'
                                 )}
-                                style={{ width: size * 0.6, height: size * 0.6 }}
-                            />
-                        </button>
-                    ))}
+                                aria-label={`ブラシサイズ ${size}px`}
+                                title={`${size}px`}
+                            >
+                                <div
+                                    className={cn(
+                                        'rounded-full',
+                                        drawing.brushSize === size
+                                            ? 'bg-white'
+                                            : 'bg-[var(--color-primary)]'
+                                    )}
+                                    style={{
+                                        width: Math.max(4, size * 0.5),
+                                        height: Math.max(4, size * 0.5),
+                                    }}
+                                />
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
-            {/* カラーパレット */}
-            <div className="flex justify-center items-center gap-2">
-                <span className="text-sm text-gray-500 font-medium flex items-center gap-1">
-                    <Palette size={14} />
-                    色
+            {/* 区切り線 */}
+            <div className="h-px bg-[var(--color-border)]" />
+
+            {/* カラーパレット - グリッド配置 */}
+            <div className="space-y-2">
+                <span className="text-sm font-medium text-[var(--color-text-muted)]">
+                    カラー
                 </span>
-                <div className="flex gap-1.5 flex-wrap justify-center">
+                <div className="grid grid-cols-8 gap-1.5 sm:gap-2">
                     {COLOR_PALETTE.map((color) => (
                         <button
                             key={color}
                             onClick={() => setBrushColor(color)}
                             className={cn(
-                                'w-8 h-8 rounded-full transition-all duration-200 border-2',
-                                drawing.brushColor === color
-                                    ? 'border-gray-800 ring-2 ring-gray-300 ring-offset-1 scale-110'
-                                    : 'border-transparent hover:scale-110 hover:shadow-md'
+                                'color-btn',
+                                drawing.brushColor === color && 'active',
+                                color === '#FFFFFF' && 'border-[var(--color-border)] !border-2'
                             )}
                             style={{ backgroundColor: color }}
                             aria-label={`色: ${color}`}
@@ -116,46 +133,19 @@ export function Toolbar() {
                     ))}
                 </div>
             </div>
+
+            {/* 現在の選択表示 */}
+            <div className="flex items-center justify-center gap-3 pt-2">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--color-bg-canvas)] border border-[var(--color-border)]">
+                    <div
+                        className="w-5 h-5 rounded-full border border-[var(--color-border-dark)]"
+                        style={{ backgroundColor: drawing.brushColor }}
+                    />
+                    <span className="text-sm text-[var(--color-text-secondary)]">
+                        {drawing.brushSize}px
+                    </span>
+                </div>
+            </div>
         </div>
-    );
-}
-
-// ============================================================
-// サブコンポーネント
-// ============================================================
-
-interface ToolButtonProps {
-    onClick: () => void;
-    icon: React.ReactNode;
-    label: string;
-    disabled?: boolean;
-    variant?: 'default' | 'danger';
-}
-
-function ToolButton({
-    onClick,
-    icon,
-    label,
-    disabled = false,
-    variant = 'default',
-}: ToolButtonProps) {
-    return (
-        <button
-            onClick={onClick}
-            disabled={disabled}
-            className={cn(
-                'p-2.5 rounded-lg transition-all duration-200',
-                'flex items-center justify-center',
-                disabled && 'opacity-40 cursor-not-allowed',
-                variant === 'default' &&
-                'bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300',
-                variant === 'danger' &&
-                'bg-white border border-gray-200 hover:bg-red-50 hover:border-red-300 hover:text-red-600'
-            )}
-            aria-label={label}
-            title={label}
-        >
-            {icon}
-        </button>
     );
 }

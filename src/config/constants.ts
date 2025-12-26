@@ -27,16 +27,38 @@ export const CANVAS_CONFIG = {
 export const BRUSH_SIZES = [4, 8, 12, 20] as const;
 export type BrushSize = (typeof BRUSH_SIZES)[number];
 
-/** カラーパレット */
+/** カラーパレット - お絵描きの森風に拡張 */
 export const COLOR_PALETTE = [
+    // Row 1: 基本色
     '#000000', // 黒
+    '#404040', // 濃いグレー
+    '#808080', // グレー
+    '#FFFFFF', // 白
+    // Row 2: 暖色系
     '#FF0000', // 赤
-    '#0000FF', // 青
-    '#00AA00', // 緑
     '#FF6600', // オレンジ
+    '#FFCC00', // 黄色
+    '#FFFF00', // 明るい黄色
+    // Row 3: 緑系
+    '#00AA00', // 緑
+    '#00CC66', // エメラルド
+    '#00FFCC', // ミント
+    '#66FF66', // ライム
+    // Row 4: 青系
+    '#0066FF', // 青
+    '#00CCFF', // 水色
+    '#0000FF', // ディープブルー
+    '#6666FF', // 藤色
+    // Row 5: 紫・ピンク系
     '#9900FF', // 紫
+    '#CC66FF', // ラベンダー
     '#FF69B4', // ピンク
+    '#FF99CC', // ライトピンク
+    // Row 6: 茶・肌色系
     '#8B4513', // 茶
+    '#CD853F', // サンド
+    '#DEB887', // 肌色
+    '#F5DEB3', // クリーム
 ] as const;
 export type PaletteColor = (typeof COLOR_PALETTE)[number];
 

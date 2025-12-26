@@ -4,10 +4,8 @@
 /**
  * Rakugaki Gallery - メインページ
  *
+ * 温かみのある洗練されたデザイン
  * 画面ステートに応じた表示を制御
- * - drawing: 描画キャンバス
- * - evaluating: ローディング
- * - gallery: 評論結果表示
  */
 
 import React, { useRef, useCallback, useState } from 'react';
@@ -18,7 +16,6 @@ import { Toolbar } from '@/components/canvas/Toolbar';
 import { LoadingAnimation } from '@/components/ui/LoadingAnimation';
 import { GalleryCard } from '@/components/gallery/GalleryCard';
 import { ShareButtons } from '@/components/share/ShareButtons';
-import { Button } from '@/components/ui/Button';
 import {
   useGalleryStore,
   useCurrentScreen,
@@ -56,7 +53,6 @@ export default function HomePage() {
     setScreen('evaluating');
 
     try {
-      // 続編機能: 直近の作品情報を取得
       const { artworkHistory } = useGalleryStore.getState();
       const lastArtwork = artworkHistory[artworkHistory.length - 1];
 
@@ -115,30 +111,30 @@ export default function HomePage() {
   }, [setScreen, setError]);
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
+    <main className="min-h-screen flex flex-col">
       {/* ヘッダー */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
+      <header className="sticky top-0 z-50 glass border-b border-[var(--color-border)]">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+          <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
             <span className="text-2xl">🎨</span>
-            <span className="hidden sm:inline">Rakugaki Gallery</span>
-            <span className="sm:hidden">落書き美術館</span>
+            <span className="text-[var(--color-primary)]">
+              Rakugaki Gallery
+            </span>
           </h1>
           {currentScreen !== 'drawing' && (
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={handleNewArtwork}
-              leftIcon={<Pencil size={16} />}
+              className="btn-secondary flex items-center gap-2 text-sm"
             >
+              <Pencil size={16} />
               新しく描く
-            </Button>
+            </button>
           )}
         </div>
       </header>
 
       {/* メインコンテンツ */}
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="flex-1 container mx-auto px-4 py-6 max-w-3xl">
         <AnimatePresence mode="wait">
           {/* 描画画面 */}
           {currentScreen === 'drawing' && (
@@ -148,15 +144,15 @@ export default function HomePage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
-              className="space-y-6"
+              className="space-y-5"
             >
-              {/* 説明 */}
-              <div className="text-center space-y-2">
-                <h2 className="text-2xl font-bold text-gray-800">
+              {/* タイトル */}
+              <div className="text-center space-y-1">
+                <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">
                   あなたの落書きを評論します
                 </h2>
-                <p className="text-gray-500">
-                  どんな落書きでも、世界的美術評論家が大真面目に評価します
+                <p className="text-[var(--color-text-muted)] text-sm">
+                  世界的美術評論家が、どんな落書きも大真面目に評価します
                 </p>
               </div>
 
@@ -171,23 +167,26 @@ export default function HomePage() {
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-center"
+                  className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-center text-sm"
                 >
                   {error}
                 </motion.div>
               )}
 
               {/* 送信ボタン */}
-              <div className="flex justify-center">
-                <Button
-                  size="lg"
+              <div className="flex justify-center pt-2">
+                <button
                   onClick={handleSubmit}
-                  isLoading={isSubmitting}
-                  leftIcon={<Sparkles size={20} />}
-                  className="min-w-[200px]"
+                  disabled={isSubmitting}
+                  className="btn-primary flex items-center gap-2 text-lg disabled:opacity-50"
                 >
+                  {isSubmitting ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Sparkles size={20} />
+                  )}
                   評論をもらう
-                </Button>
+                </button>
               </div>
             </motion.div>
           )}
@@ -222,14 +221,14 @@ export default function HomePage() {
               <ShareButtons artwork={currentArtwork} cardRef={cardRef} />
 
               {/* 続けて描くボタン */}
-              <div className="flex justify-center gap-4 pt-4">
-                <Button
-                  variant="secondary"
+              <div className="flex justify-center gap-4 pt-2">
+                <button
                   onClick={handleContinue}
-                  leftIcon={<RotateCcw size={18} />}
+                  className="btn-secondary flex items-center gap-2"
                 >
+                  <RotateCcw size={18} />
                   続けて描く
-                </Button>
+                </button>
               </div>
             </motion.div>
           )}
@@ -237,11 +236,11 @@ export default function HomePage() {
       </div>
 
       {/* フッター */}
-      <footer className="mt-auto py-6 text-center text-gray-400 text-sm">
-        <p>
-          🧐 評論家: ジャン＝ピエール・デュボワ
+      <footer className="py-4 text-center border-t border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
+        <p className="text-[var(--color-text-muted)] text-sm">
+          評論家: ジャン＝ピエール・デュボワ
         </p>
-        <p className="mt-1">
+        <p className="text-[var(--color-text-muted)] text-xs mt-1 opacity-70">
           ※ 本アプリの評論はAIによるパロディです
         </p>
       </footer>
