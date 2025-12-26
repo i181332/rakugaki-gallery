@@ -103,9 +103,8 @@ export default function HomePage() {
     reset();
   }, [reset]);
 
-  // 続けて描く（同じアーティストとして）
+  // 続けて描く（同じアーティストとして、キャンバスは保持）
   const handleContinue = useCallback(() => {
-    canvasRef.current?.clear();
     setScreen('drawing');
     setError(null);
   }, [setScreen, setError]);
