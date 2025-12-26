@@ -1,14 +1,14 @@
 // src/lib/gemini.ts
 /**
- * Gemini API クライアント
+ * Gemini API クライアント（新SDK @google/genai 対応）
  *
  * 画像からの評論生成を行うサーバーサイド専用モジュール
+ * - Gemini 2.5 Flash 対応
  * - リトライロジック
  * - レスポンスパース
- * - フォールバック処理
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import type { Evaluation } from '@/types';
 import { GEMINI_CONFIG } from '@/config/constants';
 import { INITIAL_CRITIQUE_PROMPT, buildContinuationPrompt } from './prompts';
@@ -38,7 +38,7 @@ export interface PreviousWork {
 /**
  * サーバーサイドでのみ使用可能なGemini API初期化
  */
-function getGenAI(): GoogleGenerativeAI {
+function getGenAI(): GoogleGenAI {
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
@@ -48,7 +48,7 @@ function getGenAI(): GoogleGenerativeAI {
         );
     }
 
-    return new GoogleGenerativeAI(apiKey);
+    return new GoogleGenAI({ apiKey });
 }
 
 /**
@@ -62,16 +62,7 @@ export async function generateCritique(
     imageBase64: string,
     previousWork?: PreviousWork
 ): Promise<Evaluation> {
-    const genAI = getGenAI();
-    const model = genAI.getGenerativeModel({
-        model: GEMINI_CONFIG.MODEL,
-        generationConfig: {
-            temperature: GEMINI_CONFIG.GENERATION.TEMPERATURE,
-            topP: GEMINI_CONFIG.GENERATION.TOP_P,
-            topK: GEMINI_CONFIG.GENERATION.TOP_K,
-            maxOutputTokens: GEMINI_CONFIG.GENERATION.MAX_OUTPUT_TOKENS,
-        },
-    });
+    const ai = getGenAI();
 
     let lastError: Error | null = null;
 
@@ -92,22 +83,30 @@ export async function generateCritique(
             const imageData = imageBase64.replace(/^data:image\/\w+;base64,/, '');
 
             console.log(
-                `[Gemini] Attempt ${attempt + 1}/${GEMINI_CONFIG.MAX_RETRIES + 1} - Starting request`
+                `[Gemini] Attempt ${attempt + 1}/${GEMINI_CONFIG.MAX_RETRIES + 1} - Starting request with model: ${GEMINI_CONFIG.MODEL}`
             );
 
-            // API呼び出し
-            const result = await model.generateContent([
-                {
-                    inlineData: {
-                        mimeType: 'image/png',
-                        data: imageData,
+            // 新しいSDKでのAPI呼び出し
+            const result = await ai.models.generateContent({
+                model: GEMINI_CONFIG.MODEL,
+                contents: [
+                    {
+                        inlineData: {
+                            mimeType: 'image/png',
+                            data: imageData,
+                        },
                     },
+                    { text: prompt },
+                ],
+                config: {
+                    temperature: GEMINI_CONFIG.GENERATION.TEMPERATURE,
+                    topP: GEMINI_CONFIG.GENERATION.TOP_P,
+                    topK: GEMINI_CONFIG.GENERATION.TOP_K,
+                    maxOutputTokens: GEMINI_CONFIG.GENERATION.MAX_OUTPUT_TOKENS,
                 },
-                { text: prompt },
-            ]);
+            });
 
-            const response = result.response;
-            const text = response.text();
+            const text = result.text || '';
 
             console.log(
                 `[Gemini] Attempt ${attempt + 1} - Response received (${text.length} chars)`
@@ -141,7 +140,7 @@ export async function generateCritique(
         }
     }
 
-    // すべてのリトライが失敗した場合はエラーを投げる（フォールバックは使わない）
+    // すべてのリトライが失敗した場合はエラーを投げる
     console.error('[Gemini] All retries exhausted:', lastError);
     throw new GeminiError(
         'API_ERROR',
