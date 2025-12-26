@@ -5,8 +5,8 @@ name = "rakugaki-gallery"
 compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
 
-# Pages設定
-pages_build_output_dir = ".next"
+# Pages設定 - @cloudflare/next-on-pages の出力ディレクトリ
+pages_build_output_dir = ".vercel/output/static"
 
 # 環境変数（秘密情報はCloudflare Dashboardで設定）
 [vars]
