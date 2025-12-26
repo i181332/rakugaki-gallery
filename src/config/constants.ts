@@ -101,7 +101,7 @@ export const API_CONFIG = {
 
 export const GEMINI_CONFIG = {
     /** 使用するモデル名 */
-    MODEL: 'gemini-2.0-flash-exp',
+    MODEL: 'gemini-2.5-flash',
     /** 最大リトライ回数 */
     MAX_RETRIES: 2,
     /** 生成パラメータ */
