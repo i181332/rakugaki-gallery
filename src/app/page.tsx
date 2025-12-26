@@ -135,62 +135,60 @@ export default function HomePage() {
 
       {/* メインコンテンツ */}
       <div className="flex-1 container mx-auto px-4 py-6 max-w-3xl">
+        {/* 描画画面 - 常にマウントし、非表示時はhiddenで隠す（状態保持のため） */}
+        <div className={currentScreen === 'drawing' ? '' : 'hidden'}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-5"
+          >
+            {/* タイトル */}
+            <div className="text-center space-y-1">
+              <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">
+                あなたの落書きを評論します
+              </h2>
+              <p className="text-[var(--color-text-muted)] text-sm">
+                世界的美術評論家が、どんな落書きも大真面目に評価します
+              </p>
+            </div>
+
+            {/* キャンバス */}
+            <DrawingCanvas ref={canvasRef} />
+
+            {/* ツールバー */}
+            <Toolbar />
+
+            {/* エラー表示 */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-center text-sm"
+              >
+                {error}
+              </motion.div>
+            )}
+
+            {/* 送信ボタン */}
+            <div className="flex justify-center pt-2">
+              <button
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="btn-primary flex items-center gap-2 text-lg disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Sparkles size={20} />
+                )}
+                評論をもらう
+              </button>
+            </div>
+          </motion.div>
+        </div>
+
         <AnimatePresence mode="wait">
-          {/* 描画画面 */}
-          {currentScreen === 'drawing' && (
-            <motion.div
-              key="drawing"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-5"
-            >
-              {/* タイトル */}
-              <div className="text-center space-y-1">
-                <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-primary)]">
-                  あなたの落書きを評論します
-                </h2>
-                <p className="text-[var(--color-text-muted)] text-sm">
-                  世界的美術評論家が、どんな落書きも大真面目に評価します
-                </p>
-              </div>
-
-              {/* キャンバス */}
-              <DrawingCanvas ref={canvasRef} />
-
-              {/* ツールバー */}
-              <Toolbar />
-
-              {/* エラー表示 */}
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-center text-sm"
-                >
-                  {error}
-                </motion.div>
-              )}
-
-              {/* 送信ボタン */}
-              <div className="flex justify-center pt-2">
-                <button
-                  onClick={handleSubmit}
-                  disabled={isSubmitting}
-                  className="btn-primary flex items-center gap-2 text-lg disabled:opacity-50"
-                >
-                  {isSubmitting ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Sparkles size={20} />
-                  )}
-                  評論をもらう
-                </button>
-              </div>
-            </motion.div>
-          )}
-
           {/* ローディング画面 */}
           {currentScreen === 'evaluating' && (
             <motion.div
