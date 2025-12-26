@@ -6,6 +6,8 @@
  * - 指定IDの作品データを取得
  */
 
+export const runtime = 'edge';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getArtwork } from '@/lib/artworkStore';
 import type { Artwork } from '@/types';

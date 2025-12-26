@@ -43,11 +43,12 @@ interface RateLimitResult {
 
 /**
  * 再利用可能なレート制限クラス
+ * 注意: Edge Runtimeでは各リクエストが独立しているため、
+ * 本格的なレート制限にはCloudflare KVなどの外部ストレージが必要
  */
 export class RateLimiter {
     private readonly records = new Map<string, RateLimitRecord>();
     private readonly config: Required<RateLimiterConfig>;
-    private cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
     constructor(config: RateLimiterConfig) {
         this.config = {
@@ -55,8 +56,6 @@ export class RateLimiter {
             windowMs: config.windowMs,
             cleanupIntervalMs: config.cleanupIntervalMs ?? config.windowMs,
         };
-
-        this.startCleanup();
     }
 
     /**
@@ -108,38 +107,6 @@ export class RateLimiter {
      * すべてのレコードをクリア
      */
     clear(): void {
-        this.records.clear();
-    }
-
-    /**
-     * クリーンアップを開始
-     */
-    private startCleanup(): void {
-        this.cleanupTimer = setInterval(() => {
-            this.cleanup();
-        }, this.config.cleanupIntervalMs);
-    }
-
-    /**
-     * 期限切れエントリをクリーンアップ
-     */
-    private cleanup(): void {
-        const now = Date.now();
-        for (const [key, record] of this.records.entries()) {
-            if (now > record.resetTime) {
-                this.records.delete(key);
-            }
-        }
-    }
-
-    /**
-     * リソースを解放
-     */
-    destroy(): void {
-        if (this.cleanupTimer) {
-            clearInterval(this.cleanupTimer);
-            this.cleanupTimer = null;
-        }
         this.records.clear();
     }
 

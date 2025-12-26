@@ -7,6 +7,8 @@
  * - 作品の閲覧・新規作成への導線
  */
 
+export const runtime = 'edge';
+
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getArtwork } from '@/lib/artworkStore';

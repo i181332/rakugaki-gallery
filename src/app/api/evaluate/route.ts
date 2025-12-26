@@ -7,6 +7,8 @@
  * - レート制限、バリデーション、エラーハンドリング
  */
 
+export const runtime = 'edge';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { nanoid } from 'nanoid';
 import { generateCritique, GeminiError } from '@/lib/gemini';
