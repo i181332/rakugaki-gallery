@@ -18,7 +18,7 @@ import React, {
     forwardRef,
     useImperativeHandle,
 } from 'react';
-import { Stage, Layer, Line } from 'react-konva';
+import { Stage, Layer, Line, Rect } from 'react-konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import type Konva from 'konva';
 import { useGalleryStore } from '@/stores/galleryStore';
@@ -186,9 +186,16 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle>(
                             onTouchMove={handlePointerMove}
                             onTouchEnd={handlePointerUp}
                             className="cursor-crosshair"
-                            style={{ background: '#FFFCF8' }}
                         >
                             <Layer>
+                                {/* 背景レイヤー（toDataURLに含まれるよう実体として描画） */}
+                                <Rect
+                                    x={0}
+                                    y={0}
+                                    width={canvasSize}
+                                    height={canvasSize}
+                                    fill="#FFFCF8"
+                                />
                                 {lines.map((line) => (
                                     <Line
                                         key={line.id}
