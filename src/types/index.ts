@@ -164,7 +164,7 @@ export interface HistoryState {
 /**
  * 画面状態の列挙型
  */
-export type AppScreen = 'drawing' | 'evaluating' | 'gallery' | 'share';
+export type AppScreen = 'login' | 'drawing' | 'evaluating' | 'gallery' | 'share';
 
 /**
  * グローバル状態管理のインターフェース
@@ -172,6 +172,10 @@ export type AppScreen = 'drawing' | 'evaluating' | 'gallery' | 'share';
 export interface GalleryState {
     // === 画面状態 ===
     currentScreen: AppScreen;
+
+    // === ユーザー情報 ===
+    artistName: string;
+    avatarSeed: string;
 
     // === 描画状態 ===
     drawing: DrawingState;
@@ -187,6 +191,8 @@ export interface GalleryState {
 
     // === アクション ===
     setScreen: (screen: AppScreen) => void;
+    setArtistName: (name: string) => void;
+    setAvatarSeed: (seed: string) => void;
     setBrushColor: (color: string) => void;
     setBrushSize: (size: number) => void;
     saveToHistory: (image: string) => void;

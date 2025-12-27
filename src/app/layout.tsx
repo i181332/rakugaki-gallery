@@ -47,6 +47,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja" className={inter.variable}>
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+        />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&family=Noto+Serif+JP:wght@400;700&display=swap"
+        />
+      </head>
       <body className="antialiased">{children}</body>
     </html>
   );

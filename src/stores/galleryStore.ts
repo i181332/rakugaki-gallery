@@ -37,7 +37,9 @@ export const useGalleryStore = create<GalleryState>()(
     devtools(
         subscribeWithSelector((set) => ({
             // ========== 初期状態 ==========
-            currentScreen: 'drawing',
+            currentScreen: 'login',
+            artistName: '名無しのアトリエ',
+            avatarSeed: 'Felix',
             drawing: { ...initialDrawingState },
             history: { ...initialHistoryState },
             currentArtwork: null,
@@ -52,6 +54,13 @@ export const useGalleryStore = create<GalleryState>()(
                     false,
                     'setScreen'
                 ),
+
+            // ========== ユーザー情報 ==========
+            setArtistName: (name: string) =>
+                set({ artistName: name }, false, 'setArtistName'),
+
+            setAvatarSeed: (seed: string) =>
+                set({ avatarSeed: seed }, false, 'setAvatarSeed'),
 
             // ========== 描画設定 ==========
             setBrushColor: (color: string) =>
@@ -192,14 +201,16 @@ export const useGalleryStore = create<GalleryState>()(
              */
             reset: () =>
                 set(
-                    () => ({
+                    (state) => ({
                         currentScreen: 'drawing' as const,
                         drawing: { ...initialDrawingState },
                         history: { ...initialHistoryState },
                         currentArtwork: null,
                         isLoading: false,
                         error: null,
-                        // artworkHistoryは保持
+                        // artistName, avatarSeed, artworkHistoryは保持
+                        artistName: state.artistName,
+                        avatarSeed: state.avatarSeed,
                     }),
                     false,
                     'reset'
@@ -252,3 +263,11 @@ export const useCurrentArtwork = () =>
 /** 作品履歴 */
 export const useArtworkHistory = () =>
     useGalleryStore((s) => s.artworkHistory);
+
+/** アーティスト名 */
+export const useArtistName = () =>
+    useGalleryStore((s) => s.artistName);
+
+/** アバターシード */
+export const useAvatarSeed = () =>
+    useGalleryStore((s) => s.avatarSeed);
