@@ -3,216 +3,246 @@
 
 /**
  * 描画キャンバスコンポーネント
- *
- * Konvaを使用したインタラクティブなキャンバス
- * - マウス/タッチ対応
- * - リアルタイム描画
- * - 木枠風のフレームデザイン
+ * UI.htmlの設計に100%忠実な実装
  */
 
 import React, {
-    useRef,
-    useCallback,
-    useEffect,
-    useState,
-    forwardRef,
-    useImperativeHandle,
+  useRef,
+  useCallback,
+  useEffect,
+  useState,
+  forwardRef,
+  useImperativeHandle,
 } from 'react';
 import { Stage, Layer, Line, Rect } from 'react-konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import type Konva from 'konva';
-import { useGalleryStore } from '@/stores/galleryStore';
-import { CANVAS_CONFIG } from '@/config/constants';
-
-// ============================================================
-// 型定義
-// ============================================================
 
 interface LineData {
-    id: number;
-    points: number[];
-    stroke: string;
-    strokeWidth: number;
+  id: number;
+  points: number[];
+  stroke: string;
+  strokeWidth: number;
 }
 
-// ============================================================
-// ID生成用カウンター
-// ============================================================
+interface HistoryState {
+  lines: LineData[];
+}
 
-let lineIdCounter = 0;
-function generateLineId(): number {
-    return ++lineIdCounter;
+interface DrawingCanvasProps {
+  brushColor: string;
+  brushSize: number;
+  tool: 'pencil' | 'eraser' | 'fill';
+  onHistoryChange?: (canUndo: boolean, canRedo: boolean, hasContent: boolean) => void;
 }
 
 export interface DrawingCanvasHandle {
-    getImage: () => string | null;
-    clear: () => void;
+  getImage: () => string | null;
+  clear: () => void;
+  undo: () => void;
+  redo: () => void;
 }
 
-// ============================================================
-// コンポーネント
-// ============================================================
+let lineIdCounter = 0;
+function generateLineId(): number {
+  return ++lineIdCounter;
+}
 
-export const DrawingCanvas = forwardRef<DrawingCanvasHandle>(
-    function DrawingCanvas(_props, ref) {
-        const stageRef = useRef<Konva.Stage>(null);
-        const [lines, setLines] = useState<LineData[]>([]);
-        const isDrawingRef = useRef(false);
-        const [canvasSize, setCanvasSize] = useState<number>(CANVAS_CONFIG.DEFAULT_SIZE);
+const MAX_HISTORY = 50;
 
-        const { drawing, saveToHistory } = useGalleryStore();
+export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
+  function DrawingCanvas({ brushColor, brushSize, tool, onHistoryChange }, ref) {
+    const stageRef = useRef<Konva.Stage>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [lines, setLines] = useState<LineData[]>([]);
+    const isDrawingRef = useRef(false);
 
-        // ========== レスポンシブサイズ調整 ==========
-        useEffect(() => {
-            const updateSize = () => {
-                const maxWidth = window.innerWidth - CANVAS_CONFIG.HORIZONTAL_PADDING;
-                const newSize = Math.min(maxWidth, CANVAS_CONFIG.DEFAULT_SIZE);
-                setCanvasSize(newSize);
-            };
+    const [history, setHistory] = useState<HistoryState[]>([{ lines: [] }]);
+    const [historyIndex, setHistoryIndex] = useState(0);
 
-            updateSize();
-            window.addEventListener('resize', updateSize);
-            return () => window.removeEventListener('resize', updateSize);
-        }, []);
+    const [canvasSize, setCanvasSize] = useState({ width: 600, height: 600 });
 
-        // ========== Ref API公開 ==========
-        useImperativeHandle(ref, () => ({
-            getImage: () => {
-                if (!stageRef.current) return null;
-                return stageRef.current.toDataURL({ pixelRatio: CANVAS_CONFIG.PIXEL_RATIO });
-            },
-            clear: () => {
-                setLines([]);
-            },
-        }));
+    // レスポンシブサイズ調整
+    useEffect(() => {
+      const updateSize = () => {
+        if (containerRef.current) {
+          const rect = containerRef.current.getBoundingClientRect();
+          // 親要素のサイズに完全にフィット
+          setCanvasSize({
+            width: rect.width,
+            height: rect.height
+          });
+        }
+      };
 
-        // ========== タッチスクロール防止 ==========
-        useEffect(() => {
-            const stage = stageRef.current;
-            if (!stage) return;
+      updateSize();
+      window.addEventListener('resize', updateSize);
 
-            const container = stage.container();
-            container.style.touchAction = 'none';
-        }, []);
+      const resizeObserver = new ResizeObserver(updateSize);
+      if (containerRef.current) {
+        resizeObserver.observe(containerRef.current);
+      }
 
-        // ========== 描画イベントハンドラ ==========
-        const handlePointerDown = useCallback(
-            (e: KonvaEventObject<MouseEvent | TouchEvent>) => {
-                isDrawingRef.current = true;
-                const pos = e.target.getStage()?.getPointerPosition();
-                if (!pos) return;
+      return () => {
+        window.removeEventListener('resize', updateSize);
+        resizeObserver.disconnect();
+      };
+    }, []);
 
-                setLines((prev) => [
-                    ...prev,
-                    {
-                        id: generateLineId(),
-                        points: [pos.x, pos.y],
-                        stroke: drawing.brushColor,
-                        strokeWidth: drawing.brushSize,
-                    },
-                ]);
-            },
-            [drawing.brushColor, drawing.brushSize]
-        );
+    // 履歴変更通知
+    useEffect(() => {
+      const canUndo = historyIndex > 0;
+      const canRedo = historyIndex < history.length - 1;
+      const hasContent = lines.length > 0;
+      onHistoryChange?.(canUndo, canRedo, hasContent);
+    }, [historyIndex, history.length, lines.length, onHistoryChange]);
 
-        const handlePointerMove = useCallback(
-            (e: KonvaEventObject<MouseEvent | TouchEvent>) => {
-                if (!isDrawingRef.current) return;
+    // 履歴に保存
+    const saveToHistory = useCallback((newLines: LineData[]) => {
+      setHistory((prev) => {
+        const newHistory = prev.slice(0, historyIndex + 1);
+        newHistory.push({ lines: newLines });
+        if (newHistory.length > MAX_HISTORY) {
+          return newHistory.slice(-MAX_HISTORY);
+        }
+        return newHistory;
+      });
+      setHistoryIndex((prev) => Math.min(prev + 1, MAX_HISTORY - 1));
+    }, [historyIndex]);
 
-                const stage = e.target.getStage();
-                const pos = stage?.getPointerPosition();
-                if (!pos) return;
+    // Ref API公開
+    useImperativeHandle(ref, () => ({
+      getImage: () => {
+        if (!stageRef.current) return null;
+        return stageRef.current.toDataURL({ pixelRatio: 2 });
+      },
+      clear: () => {
+        setLines([]);
+        saveToHistory([]);
+      },
+      undo: () => {
+        if (historyIndex > 0) {
+          const newIndex = historyIndex - 1;
+          setHistoryIndex(newIndex);
+          setLines(history[newIndex].lines);
+        }
+      },
+      redo: () => {
+        if (historyIndex < history.length - 1) {
+          const newIndex = historyIndex + 1;
+          setHistoryIndex(newIndex);
+          setLines(history[newIndex].lines);
+        }
+      },
+    }));
 
-                setLines((prev) => {
-                    if (prev.length === 0) return prev;
+    // タッチスクロール防止
+    useEffect(() => {
+      const stage = stageRef.current;
+      if (!stage) return;
+      const container = stage.container();
+      container.style.touchAction = 'none';
+    }, []);
 
-                    const lastLine = prev[prev.length - 1];
-                    const newPoints = [...lastLine.points, pos.x, pos.y];
+    // 描画開始
+    const handlePointerDown = useCallback(
+      (e: KonvaEventObject<MouseEvent | TouchEvent>) => {
+        if (tool === 'fill') return;
 
-                    return [
-                        ...prev.slice(0, -1),
-                        { ...lastLine, points: newPoints },
-                    ];
-                });
-            },
-            []
-        );
+        isDrawingRef.current = true;
+        const pos = e.target.getStage()?.getPointerPosition();
+        if (!pos) return;
 
-        const handlePointerUp = useCallback(() => {
-            if (!isDrawingRef.current) return;
-            isDrawingRef.current = false;
+        const newLine: LineData = {
+          id: generateLineId(),
+          points: [pos.x, pos.y],
+          stroke: tool === 'eraser' ? '#ffffff' : brushColor,
+          strokeWidth: brushSize,
+        };
 
-            const stage = stageRef.current;
-            if (stage && lines.length > 0) {
-                requestAnimationFrame(() => {
-                    const dataUrl = stage.toDataURL({ pixelRatio: CANVAS_CONFIG.PIXEL_RATIO });
-                    saveToHistory(dataUrl);
-                });
-            }
-        }, [lines.length, saveToHistory]);
+        setLines((prev) => [...prev, newLine]);
+      },
+      [brushColor, brushSize, tool]
+    );
 
-        // ========== レンダリング ==========
-        return (
-            <div className="flex justify-center">
-                {/* 木枠風フレーム */}
-                <div className="wood-frame">
-                    <div
-                        className="wood-frame-inner relative overflow-hidden"
-                        style={{ width: canvasSize, height: canvasSize }}
-                    >
-                        {/* 描画案内（キャンバスが空の時） */}
-                        {lines.length === 0 && (
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                                <div className="text-center">
-                                    <p className="text-[var(--color-text-muted)] text-lg font-medium select-none">
-                                        ここに描いてください
-                                    </p>
-                                    <p className="text-[var(--color-text-muted)] text-sm mt-1 opacity-60 select-none">
-                                        マウスまたはタッチで描画
-                                    </p>
-                                </div>
-                            </div>
-                        )}
+    // 描画中
+    const handlePointerMove = useCallback(
+      (e: KonvaEventObject<MouseEvent | TouchEvent>) => {
+        if (!isDrawingRef.current) return;
 
-                        <Stage
-                            ref={stageRef}
-                            width={canvasSize}
-                            height={canvasSize}
-                            onMouseDown={handlePointerDown}
-                            onMouseMove={handlePointerMove}
-                            onMouseUp={handlePointerUp}
-                            onMouseLeave={handlePointerUp}
-                            onTouchStart={handlePointerDown}
-                            onTouchMove={handlePointerMove}
-                            onTouchEnd={handlePointerUp}
-                            className="cursor-crosshair"
-                        >
-                            <Layer>
-                                {/* 背景レイヤー（toDataURLに含まれるよう実体として描画） */}
-                                <Rect
-                                    x={0}
-                                    y={0}
-                                    width={canvasSize}
-                                    height={canvasSize}
-                                    fill="#FFFCF8"
-                                />
-                                {lines.map((line) => (
-                                    <Line
-                                        key={line.id}
-                                        points={line.points}
-                                        stroke={line.stroke}
-                                        strokeWidth={line.strokeWidth}
-                                        tension={0.5}
-                                        lineCap="round"
-                                        lineJoin="round"
-                                        globalCompositeOperation="source-over"
-                                    />
-                                ))}
-                            </Layer>
-                        </Stage>
-                    </div>
-                </div>
-            </div>
-        );
-    }
+        const stage = e.target.getStage();
+        const pos = stage?.getPointerPosition();
+        if (!pos) return;
+
+        setLines((prev) => {
+          if (prev.length === 0) return prev;
+
+          const lastLine = prev[prev.length - 1];
+          const newPoints = [...lastLine.points, pos.x, pos.y];
+
+          return [
+            ...prev.slice(0, -1),
+            { ...lastLine, points: newPoints },
+          ];
+        });
+      },
+      []
+    );
+
+    // 描画終了
+    const handlePointerUp = useCallback(() => {
+      if (!isDrawingRef.current) return;
+      isDrawingRef.current = false;
+
+      setLines((currentLines) => {
+        if (currentLines.length > 0) {
+          saveToHistory(currentLines);
+        }
+        return currentLines;
+      });
+    }, [saveToHistory]);
+
+    return (
+      <div
+        ref={containerRef}
+        className="w-full h-full absolute inset-0"
+      >
+        <Stage
+          ref={stageRef}
+          width={canvasSize.width}
+          height={canvasSize.height}
+          onMouseDown={handlePointerDown}
+          onMouseMove={handlePointerMove}
+          onMouseUp={handlePointerUp}
+          onMouseLeave={handlePointerUp}
+          onTouchStart={handlePointerDown}
+          onTouchMove={handlePointerMove}
+          onTouchEnd={handlePointerUp}
+          className="cursor-crosshair"
+        >
+          <Layer>
+            <Rect
+              x={0}
+              y={0}
+              width={canvasSize.width}
+              height={canvasSize.height}
+              fill="#ffffff"
+            />
+            {lines.map((line) => (
+              <Line
+                key={line.id}
+                points={line.points}
+                stroke={line.stroke}
+                strokeWidth={line.strokeWidth}
+                tension={0.5}
+                lineCap="round"
+                lineJoin="round"
+                globalCompositeOperation="source-over"
+              />
+            ))}
+          </Layer>
+        </Stage>
+      </div>
+    );
+  }
 );
