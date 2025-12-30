@@ -56,11 +56,13 @@ function getGenAI(): GoogleGenAI {
  *
  * @param imageBase64 - Base64エンコードされた画像（data:image/...;base64, プレフィックス付きでも可）
  * @param previousWork - 前作の情報（続編作成時のみ）
+ * @param artistName - ユーザーが設定したアーティスト名
  * @returns 生成された評論データ
  */
 export async function generateCritique(
     imageBase64: string,
-    previousWork?: PreviousWork
+    previousWork?: PreviousWork,
+    artistName?: string
 ): Promise<Evaluation> {
     const ai = getGenAI();
 
@@ -69,9 +71,14 @@ export async function generateCritique(
     for (let attempt = 0; attempt <= GEMINI_CONFIG.MAX_RETRIES; attempt++) {
         try {
             // プロンプト構築
-            const basePrompt = previousWork
+            let basePrompt = previousWork
                 ? buildContinuationPrompt(previousWork)
                 : INITIAL_CRITIQUE_PROMPT;
+
+            // アーティスト名が指定されている場合、プロンプトに追加
+            if (artistName) {
+                basePrompt = basePrompt + `\n\n【重要】アーティスト名は必ず「${artistName}」を使用すること。架空の名前を生成してはならない。`;
+            }
 
             // リトライ時は警告を追加
             const prompt =

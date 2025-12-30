@@ -101,6 +101,8 @@ export interface Artwork {
 export interface EvaluateRequest {
     /** Base64エンコードされた画像 */
     image: string;
+    /** ユーザーが設定したアーティスト名 */
+    artistName?: string;
     /** 前作の情報（続編作成時） */
     previousWork?: {
         id: string;

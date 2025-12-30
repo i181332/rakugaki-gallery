@@ -84,11 +84,11 @@ export async function POST(request: NextRequest) {
         }
 
         console.log(
-            `[API] Generating critique for IP: ${ip}, hasPreviousWork: ${!!body.previousWork}`
+            `[API] Generating critique for IP: ${ip}, hasPreviousWork: ${!!body.previousWork}, artistName: ${body.artistName}`
         );
 
         // 評論生成
-        const evaluation = await generateCritique(body.image, body.previousWork);
+        const evaluation = await generateCritique(body.image, body.previousWork, body.artistName);
 
         // 作品データ構築
         const artwork: Artwork = {
